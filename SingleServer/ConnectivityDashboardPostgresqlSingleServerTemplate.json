@@ -1,0 +1,1166 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "PostgresqlSingleServerURI": {
+          "type": "string",
+          "metadata": {
+            "description": "Enter full URI of the Azure Database for PostgreSQL Single Server"
+          }
+      },
+      "dashboardName": {
+          "type": "string",
+          "metadata": {
+            "description": "The name is restricted to only alphanumeric and hyphen characters. Spaces will be automatically replaced with hyphen"
+          }
+      }
+  },
+  "variables": {
+    "Servername":  "[last(split(parameters('PostgreSQLSingleServerURI'),'/'))]"
+  },
+  "resources": [
+      {
+        "properties": {
+            "lenses": {
+              "0": {
+                "order": 0,
+                "parts": {
+                  "0": {
+                    "position": {
+                      "x": 0,
+                      "y": 0,
+                      "colSpan": 6,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P1D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "//All new connections (including replication) regardless of failed or successful by Ip\nlet AllConnections=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\";\nlet starttime=toscalar( AllConnections\n| summarize mintime=min(TimeGenerated)\n| project bin(mintime,1m));\nlet endtime=toscalar(AllConnections\n| summarize max(TimeGenerated));\nAllConnections\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| where IP !contains \"127.0.0.1\" //exclude azure local connections\n| summarize count() by bin(TimeGenerated,1m),IP\n| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by IP\n| render timechart\n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "FrameControlChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "value": "Line",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "value": {
+                            "xAxis": {
+                              "name": "TimeGenerated",
+                              "type": "datetime"
+                            },
+                            "yAxis": [
+                              {
+                                "name": "Connections",
+                                "type": "real"
+                              }
+                            ],
+                            "splitBy": [
+                              {
+                                "name": "IP",
+                                "type": "string"
+                              }
+                            ],
+                            "aggregation": "Sum"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "value": {
+                            "isEnabled": true,
+                            "position": "Bottom"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": true,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {},
+                      "partHeader": {
+                        "title": "All Connections by IP",
+                        "subtitle": "Includes failed and successful"
+                      }
+                    }
+                  },
+                  "1": {
+                    "position": {
+                      "x": 6,
+                      "y": 0,
+                      "colSpan": 6,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P7D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "// Replication vs Non-Replication connections \nlet AllConnections=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\";\nlet starttime=toscalar( AllConnections\n| summarize mintime=min(TimeGenerated)\n| project bin(mintime,1m));\nlet endtime=toscalar(AllConnections\n| summarize max(TimeGenerated));\nAllConnections\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| where user !contains 'azure_superuser' // exclude azure connections from successful connections. User (role) is not reported on failed ones\n| extend Connection=iff(Message contains \"replication connection authorized\",\"ReplicationConnection\",\"Non-ReplicationConnection\")\n| summarize count() by bin(TimeGenerated,1m),Connection\n| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by Connection\n| render timechart \n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "FrameControlChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "value": "Line",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "value": {
+                            "xAxis": {
+                              "name": "TimeGenerated",
+                              "type": "datetime"
+                            },
+                            "yAxis": [
+                              {
+                                "name": "Connections",
+                                "type": "real"
+                              }
+                            ],
+                            "splitBy": [
+                              {
+                                "name": "Connection",
+                                "type": "string"
+                              }
+                            ],
+                            "aggregation": "Sum"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "value": {
+                            "isEnabled": true,
+                            "position": "Bottom"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": true,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {},
+                      "partHeader": {
+                        "title": "Replication vs Non-Replication connections",
+                        "subtitle": "Connection comparison"
+                      }
+                    }
+                  },
+                  "2": {
+                    "position": {
+                      "x": 12,
+                      "y": 0,
+                      "colSpan": 6,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P7D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "// Successful Non-replication connections by database\nlet SuccessConnNonReplication=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection authorized\";\nlet starttime=toscalar( SuccessConnNonReplication\n| summarize mintime=min(TimeGenerated)\n| project bin(mintime,1m));\nlet endtime=toscalar(SuccessConnNonReplication\n| summarize max(TimeGenerated));\nSuccessConnNonReplication\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| extend database=tostring(allmatches[0][1])\n| where user !contains 'azure_superuser' // exclude azure connections\n| summarize count() by bin(TimeGenerated,1m),database\n| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by database\n| render timechart\n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "FrameControlChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "value": "Line",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "value": {
+                            "xAxis": {
+                              "name": "TimeGenerated",
+                              "type": "datetime"
+                            },
+                            "yAxis": [
+                              {
+                                "name": "Connections",
+                                "type": "real"
+                              }
+                            ],
+                            "splitBy": [
+                              {
+                                "name": "database",
+                                "type": "string"
+                              }
+                            ],
+                            "aggregation": "Sum"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "value": {
+                            "isEnabled": true,
+                            "position": "Bottom"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": true,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {},
+                      "partHeader": {
+                        "title": "Successful Connections by database",
+                        "subtitle": "Only displays successful Non-replication connections grouped by database"
+                      }
+                    }
+                  },
+                  "3": {
+                    "position": {
+                      "x": 0,
+                      "y": 4,
+                      "colSpan": 6,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P7D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "//Failed vs Successful Connections [including replication]\nlet SuccessConn=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\";\nlet FailedConn=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where errorLevel_s =='FATAL'\n| where Message matches regex \"role.*does not exist\" or Message matches regex \"database.*does not exist\" or Message contains \"no pg_hba.conf\" or Message contains \"password authentication failed\";\nlet AllConnections=SuccessConn | union FailedConn;\nlet starttime=toscalar( AllConnections\n| summarize mintime=min(TimeGenerated)\n| project bin(mintime,1m));\nlet endtime=toscalar(AllConnections\n| summarize max(TimeGenerated));\nAllConnections\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| where user !contains 'azure_superuser' // exclude azure connections from successful connections. User (role) is not reported on failed ones\n| extend Connection=iff(errorLevel_s !contains \"FATAL\",\"SuccessfulConnection\",\"FailedConnection\")\n| summarize count() by bin(TimeGenerated,1m),Connection\n| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by Connection\n| render timechart \n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "FrameControlChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "value": "Line",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "value": {
+                            "xAxis": {
+                              "name": "TimeGenerated",
+                              "type": "datetime"
+                            },
+                            "yAxis": [
+                              {
+                                "name": "Connections",
+                                "type": "real"
+                              }
+                            ],
+                            "splitBy": [
+                              {
+                                "name": "Connection",
+                                "type": "string"
+                              }
+                            ],
+                            "aggregation": "Sum"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "value": {
+                            "isEnabled": true,
+                            "position": "Bottom"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": true,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {},
+                      "partHeader": {
+                        "title": "Successful vs Failed Connections",
+                        "subtitle": "Connection comparison"
+                      }
+                    }
+                  },
+                  "4": {
+                    "position": {
+                      "x": 6,
+                      "y": 4,
+                      "colSpan": 6,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P3D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "// Replication Connections by user\nlet SuccessConn=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\";\nlet starttime=toscalar( SuccessConn\n| summarize mintime=min(TimeGenerated)\n| project bin(mintime,1m));\nlet endtime=toscalar(SuccessConn\n| summarize max(TimeGenerated));\nSuccessConn\n| where Message contains \"replication connection authorized\"\n| extend tmpuser=extract(@'user=(.\\S+)', 1, Message)\n| extend user=extract(@'(.+)SSL$',1,tmpuser)\n| summarize count() by bin(TimeGenerated,1m),user\n| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by user\n| render timechart\n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "FrameControlChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "value": "Line",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "value": {
+                            "xAxis": {
+                              "name": "TimeGenerated",
+                              "type": "datetime"
+                            },
+                            "yAxis": [
+                              {
+                                "name": "Connections",
+                                "type": "real"
+                              }
+                            ],
+                            "splitBy": [
+                              {
+                                "name": "user",
+                                "type": "string"
+                              }
+                            ],
+                            "aggregation": "Sum"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "value": {
+                            "isEnabled": true,
+                            "position": "Bottom"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": true,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {},
+                      "partHeader": {
+                        "title": "Replication connections",
+                        "subtitle": "Only displays replication connections grouped by user"
+                      }
+                    }
+                  },
+                  "5": {
+                    "position": {
+                      "x": 12,
+                      "y": 4,
+                      "colSpan": 6,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P3D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "// Successful Non-replication connections by user\nlet SuccessConnNonReplication=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection authorized\";\nlet starttime=toscalar( SuccessConnNonReplication\n| summarize mintime=min(TimeGenerated)\n| project bin(mintime,1m));\nlet endtime=toscalar(SuccessConnNonReplication\n| summarize max(TimeGenerated));\nSuccessConnNonReplication\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| extend database=tostring(allmatches[0][1])\n| where user !contains 'azure_superuser' // exclude azure connections\n| summarize count() by bin(TimeGenerated,1m),user\n| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by  user\n| render timechart\n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "FrameControlChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "value": "Line",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "value": {
+                            "xAxis": {
+                              "name": "TimeGenerated",
+                              "type": "datetime"
+                            },
+                            "yAxis": [
+                              {
+                                "name": "Connections",
+                                "type": "real"
+                              }
+                            ],
+                            "splitBy": [
+                              {
+                                "name": "user",
+                                "type": "string"
+                              }
+                            ],
+                            "aggregation": "Sum"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "value": {
+                            "isEnabled": true,
+                            "position": "Bottom"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": true,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {},
+                      "partHeader": {
+                        "title": "Successful Connections by user",
+                        "subtitle": "Only displays successful Non-replication connections grouped by user"
+                      }
+                    }
+                  },
+                  "6": {
+                    "position": {
+                      "x": 0,
+                      "y": 8,
+                      "colSpan": 11,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P3D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "//Summary of Connectivity Errors\nAzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\" \n| where Category == \"PostgreSQLLogs\"\n| where errorLevel_s =='FATAL'\n| where Message matches regex \"role.*does not exist\" or Message matches regex \"database.*does not exist\" or Message contains \"no pg_hba.conf\" or Message contains \"password authentication failed\"\n| project TimeGenerated, prefix_s,errorLevel_s, Message\n| summarize FirstError=min(TimeGenerated),LastError=max(TimeGenerated), Counter=count() by ErrorMessage=Message\n| order by Counter desc\n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "AnalyticsGrid",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": false,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {
+                        "content": {
+                          "GridColumnsWidth": {
+                            "ErrorMessage": "497px"
+                          }
+                        }
+                      },
+                      "partHeader": {
+                        "title": "Summary of Connectivity Errors",
+                        "subtitle": "All connectivity errors grouped by error message"
+                      }
+                    }
+                  },
+                  "7": {
+                    "position": {
+                      "x": 11,
+                      "y": 8,
+                      "colSpan": 7,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P3D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "//Summary of all new connections by IP\nAzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| where IP !contains \"127.0.0.1\" //exclude azure local connections\n| summarize FirstConnection=min(TimeGenerated),LastConnection=max(TimeGenerated), Counter=count() by IP\n| order by Counter desc\n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "AnalyticsGrid",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": false,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {
+                        "content": {
+                          "GridColumnsWidth": {
+                            "IP": "129px"
+                          }
+                        }
+                      },
+                      "partHeader": {
+                        "title": "Summary of new connections by IP",
+                        "subtitle": "All new connections summary grouped by IP"
+                      }
+                    }
+                  },
+                  "8": {
+                    "position": {
+                      "x": 0,
+                      "y": 12,
+                      "colSpan": 11,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P3D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "//Summary of Non-Replication connections by user/database\nAzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection authorized\"\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| extend database=tostring(allmatches[0][1])\n| where user !contains 'azure_superuser' // exclude azure connections from successful connections. User is not reported on failed ones\n| summarize FirstConnection=min(TimeGenerated),LastConnection=max(TimeGenerated), Counter=count() by user, database\n| order by Counter desc\n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "AnalyticsGrid",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": false,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {
+                        "content": {
+                          "GridColumnsWidth": {
+                            "FirstConnection": "202px",
+                            "LastConnection": "213px"
+                          }
+                        }
+                      },
+                      "partHeader": {
+                        "title": "Summary of successful connections by user and database",
+                        "subtitle": "All successful non-replication connections grouped by user and database"
+                      }
+                    }
+                  },
+                  "9": {
+                    "position": {
+                      "x": 11,
+                      "y": 12,
+                      "colSpan": 7,
+                      "rowSpan": 4
+                    },
+                    "metadata": {
+                      "inputs": [
+                        {
+                          "name": "resourceTypeMode",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ComponentId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Scope",
+                          "value": {
+                            "resourceIds": [
+                              "[parameters('PostgreSQLSingleServerURI')]"
+                            ]
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Version",
+                          "value": "2.0",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "TimeRange",
+                          "value": "P3D",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DashboardId",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "DraftRequestParameters",
+                          "value": {
+                            "scope": "hierarchy"
+                          },
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Query",
+                          "value": "//All Successful Non-replication connections \nAzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection authorized\"\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| extend database=tostring(allmatches[0][1])\n| where user !contains 'azure_superuser' // exclude azure connections from successful connections. User is not reported on failed ones\n| project TimeGenerated, user, database\n| order by TimeGenerated desc\n\n",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "ControlType",
+                          "value": "AnalyticsGrid",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "SpecificChart",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartTitle",
+                          "value": "Analytics",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "PartSubTitle",
+                          "value": "[variables('ServerName')]",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "Dimensions",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "LegendOptions",
+                          "isOptional": true
+                        },
+                        {
+                          "name": "IsQueryContainTimeRange",
+                          "value": false,
+                          "isOptional": true
+                        }
+                      ],
+                      "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                      "settings": {},
+                      "partHeader": {
+                        "title": "All Connections",
+                        "subtitle": "All sucessfull non-replication connections"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "metadata": {
+              "model": {
+                "timeRange": {
+                  "value": {
+                    "relative": {
+                      "duration": 24,
+                      "timeUnit": 1
+                    }
+                  },
+                  "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
+                },
+                "filterLocale": {
+                  "value": "en-us"
+                },
+                "filters": {
+                  "value": {
+                    "MsPortalFx_TimeRange": {
+                      "model": {
+                        "format": "utc",
+                        "granularity": "7d",
+                        "relative": "24h"
+                      },
+                      "displayCache": {
+                        "name": "UTC Time",
+                        "value": "Past 24 hours"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+        },
+        "metadata": { },
+        "apiVersion": "2015-08-01-preview",
+        "type": "Microsoft.Portal/dashboards",
+        "name": "[replace(parameters('dashboardName'),' ', '-')]",
+        "location": "[resourceGroup().location]",
+        "tags": {           
+            "hidden-title": "[replace(parameters('dashboardName'),' ', '-')]"
+        }
+      }
+  ]
+}
