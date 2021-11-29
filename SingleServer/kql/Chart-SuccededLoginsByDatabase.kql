@@ -1,0 +1,19 @@
+// Successful Non-replication connections by database
+let SuccessConnNonReplication=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized"
+| where Message !contains "replication connection authorized";
+let starttime=toscalar( SuccessConnNonReplication
+| summarize mintime=min(TimeGenerated)
+| project bin(mintime,1m));
+let endtime=toscalar(SuccessConnNonReplication
+| summarize max(TimeGenerated));
+SuccessConnNonReplication
+| extend allmatches=extract_all(@'user=(.+)database=(.\S+)', Message)
+| extend user=tostring(allmatches[0][0])
+| extend database=tostring(allmatches[0][1])
+| where user !contains 'azure_superuser' // exclude azure connections
+| summarize count() by bin(TimeGenerated,1m),database
+| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by database
+| render timechart

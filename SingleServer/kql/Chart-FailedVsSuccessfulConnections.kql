@@ -1,0 +1,24 @@
+//Failed vs Successful Connections [including replication]
+let SuccessConn=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized";
+let FailedConn=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where errorLevel_s =='FATAL'
+| where Message matches regex "role.*does not exist" or Message matches regex "database.*does not exist" or Message contains "no pg_hba.conf" or Message contains "password authentication failed";
+let AllConnections=SuccessConn | union FailedConn;
+let starttime=toscalar( AllConnections
+| summarize mintime=min(TimeGenerated)
+| project bin(mintime,1m));
+let endtime=toscalar(AllConnections
+| summarize max(TimeGenerated));
+AllConnections
+| extend allmatches=extract_all(@'user=(.+)database=(.\S+)', Message)
+| extend user=tostring(allmatches[0][0])
+| where user !contains 'azure_superuser' // exclude azure connections from successful connections. User (role) is not reported on failed ones
+| extend Connection=iff(errorLevel_s !contains "FATAL","SuccessfulConnection","FailedConnection")
+| summarize count() by bin(TimeGenerated,1m),Connection
+| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by Connection
+| render timechart 

@@ -1,0 +1,18 @@
+// Replication vs Non-Replication connections 
+let AllConnections=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized";
+let starttime=toscalar( AllConnections
+| summarize mintime=min(TimeGenerated)
+| project bin(mintime,1m));
+let endtime=toscalar(AllConnections
+| summarize max(TimeGenerated));
+AllConnections
+| extend allmatches=extract_all(@'user=(.+)database=(.\S+)', Message)
+| extend user=tostring(allmatches[0][0])
+| where user !contains 'azure_superuser' // exclude azure connections from successful connections. User (role) is not reported on failed ones
+| extend Connection=iff(Message contains "replication connection authorized","ReplicationConnection","Non-ReplicationConnection")
+| summarize count() by bin(TimeGenerated,1m),Connection
+| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by Connection
+| render timechart

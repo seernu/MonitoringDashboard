@@ -1,0 +1,9 @@
+//Summary of all new connections by IP
+AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received"
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| where IP !contains "127.0.0.1" //exclude azure local connections
+| summarize FirstConnection=min(TimeGenerated),LastConnection=max(TimeGenerated), Counter=count() by IP
+| order by Counter desc      

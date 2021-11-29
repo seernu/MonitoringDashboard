@@ -1,0 +1,9 @@
+//Summary of Connectivity Errors
+AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL" 
+| where Category == "PostgreSQLLogs"
+| where errorLevel_s =='FATAL'
+| where Message matches regex "role.*does not exist" or Message matches regex "database.*does not exist" or Message contains "no pg_hba.conf" or Message contains "password authentication failed"
+| project TimeGenerated, prefix_s,errorLevel_s, Message
+| summarize FirstError=min(TimeGenerated),LastError=max(TimeGenerated), Counter=count() by ErrorMessage=Message
+| order by Counter desc       

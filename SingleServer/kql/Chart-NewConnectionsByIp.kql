@@ -1,0 +1,16 @@
+//All new connections (including replication) regardless of failed or successful by Ip
+let AllConnections=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received";
+let starttime=toscalar( AllConnections
+| summarize mintime=min(TimeGenerated)
+| project bin(mintime,1m));
+let endtime=toscalar(AllConnections
+| summarize max(TimeGenerated));
+AllConnections
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| where IP !contains "127.0.0.1" //exclude azure local connections
+| summarize count() by bin(TimeGenerated,1m),IP
+| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by IP
+| render timechart    

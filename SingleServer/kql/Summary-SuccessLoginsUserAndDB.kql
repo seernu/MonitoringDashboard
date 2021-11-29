@@ -1,0 +1,12 @@
+//Summary of Non-Replication connections by user/database
+AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized"
+| where Message !contains "replication connection authorized"
+| extend allmatches=extract_all(@'user=(.+)database=(.\S+)', Message)
+| extend user=tostring(allmatches[0][0])
+| extend database=tostring(allmatches[0][1])
+| where user !contains 'azure_superuser' // exclude azure connections from successful connections. User is not reported on failed ones
+| summarize FirstConnection=min(TimeGenerated),LastConnection=max(TimeGenerated), Counter=count() by user, database
+| order by Counter desc

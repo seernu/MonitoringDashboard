@@ -1,0 +1,18 @@
+// Replication Connections by user
+let SuccessConn=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized";
+let starttime=toscalar( SuccessConn
+| summarize mintime=min(TimeGenerated)
+| project bin(mintime,1m));
+let endtime=toscalar(SuccessConn
+| summarize max(TimeGenerated));
+SuccessConn
+| where Message contains "replication connection authorized"
+| extend tmpuser=extract(@'user=(.\S+)', 1, Message)
+| extend tmpuser2=extract(@'(.+)SSL$',1,tmpuser)
+| extend user=iff(isempty(tmpuser2),tmpuser,tmpuser2)
+| summarize count() by bin(TimeGenerated,1m),user
+| make-series Connections=sum(count_) default=0 on TimeGenerated from starttime to endtime step 1m by user
+| render timechart       

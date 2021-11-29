@@ -1,0 +1,12 @@
+//All Successful Non-replication connections 
+AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized"
+| where Message !contains "replication connection authorized"
+| extend allmatches=extract_all(@'user=(.+)database=(.\S+)', Message)
+| extend user=tostring(allmatches[0][0])
+| extend database=tostring(allmatches[0][1])
+| where user !contains 'azure_superuser' // exclude azure connections from successful connections. User is not reported on failed ones
+| project TimeGenerated, user, database
+| order by TimeGenerated desc
