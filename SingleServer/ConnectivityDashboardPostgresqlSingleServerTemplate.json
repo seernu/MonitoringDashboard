@@ -16,7 +16,8 @@
       }
   },
   "variables": {
-    "Servername":  "[last(split(parameters('PostgreSQLSingleServerURI'),'/'))]"
+    "Servername":  "[last(split(parameters('PostgreSQLSingleServerURI'),'/'))]",
+    "dashboardID": "[concat(uniquestring(resourceGroup().id), uniquestring(replace(parameters('dashboardName'),' ', '-') ))]"
   },
   "resources": [
       {
@@ -57,15 +58,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P1D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -86,6 +78,10 @@
                           "name": "SpecificChart",
                           "value": "Line",
                           "isOptional": true
+                        },
+                        {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Chart0')]"
                         },
                         {
                           "name": "PartTitle",
@@ -130,7 +126,7 @@
                         },
                         {
                           "name": "IsQueryContainTimeRange",
-                          "value": true,
+                          "value": false,
                           "isOptional": true
                         }
                       ],
@@ -174,15 +170,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P7D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -203,6 +190,10 @@
                           "name": "SpecificChart",
                           "value": "Line",
                           "isOptional": true
+                        },
+                        {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Chart1')]"
                         },
                         {
                           "name": "PartTitle",
@@ -247,7 +238,7 @@
                         },
                         {
                           "name": "IsQueryContainTimeRange",
-                          "value": true,
+                          "value": false,
                           "isOptional": true
                         }
                       ],
@@ -291,15 +282,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P7D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -320,6 +302,10 @@
                           "name": "SpecificChart",
                           "value": "Line",
                           "isOptional": true
+                        },
+                        {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Chart2')]"
                         },
                         {
                           "name": "PartTitle",
@@ -364,7 +350,7 @@
                         },
                         {
                           "name": "IsQueryContainTimeRange",
-                          "value": true,
+                          "value": false,
                           "isOptional": true
                         }
                       ],
@@ -408,15 +394,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P7D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -437,6 +414,10 @@
                           "name": "SpecificChart",
                           "value": "Line",
                           "isOptional": true
+                        },
+                        {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Chart3')]"
                         },
                         {
                           "name": "PartTitle",
@@ -481,7 +462,7 @@
                         },
                         {
                           "name": "IsQueryContainTimeRange",
-                          "value": true,
+                          "value": false,
                           "isOptional": true
                         }
                       ],
@@ -525,15 +506,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P3D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -554,6 +526,10 @@
                           "name": "SpecificChart",
                           "value": "Line",
                           "isOptional": true
+                        },
+                        {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Chart4')]"
                         },
                         {
                           "name": "PartTitle",
@@ -598,7 +574,7 @@
                         },
                         {
                           "name": "IsQueryContainTimeRange",
-                          "value": true,
+                          "value": false,
                           "isOptional": true
                         }
                       ],
@@ -642,15 +618,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P3D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -671,6 +638,10 @@
                           "name": "SpecificChart",
                           "value": "Line",
                           "isOptional": true
+                        },
+                        {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Chart5')]"
                         },
                         {
                           "name": "PartTitle",
@@ -715,7 +686,7 @@
                         },
                         {
                           "name": "IsQueryContainTimeRange",
-                          "value": true,
+                          "value": false,
                           "isOptional": true
                         }
                       ],
@@ -759,15 +730,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P3D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -789,6 +751,10 @@
                           "isOptional": true
                         },
                         {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Summary0')]"
+                        },
+                        {
                           "name": "PartTitle",
                           "value": "Analytics",
                           "isOptional": true
@@ -796,14 +762,6 @@
                         {
                           "name": "PartSubTitle",
                           "value": "[variables('ServerName')]",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "Dimensions",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "LegendOptions",
                           "isOptional": true
                         },
                         {
@@ -858,15 +816,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P3D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -888,6 +837,10 @@
                           "isOptional": true
                         },
                         {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Summary1')]"
+                        },
+                        {
                           "name": "PartTitle",
                           "value": "Analytics",
                           "isOptional": true
@@ -895,14 +848,6 @@
                         {
                           "name": "PartSubTitle",
                           "value": "[variables('ServerName')]",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "Dimensions",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "LegendOptions",
                           "isOptional": true
                         },
                         {
@@ -957,15 +902,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P3D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -987,6 +923,10 @@
                           "isOptional": true
                         },
                         {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'Summary2')]"
+                        },
+                        {
                           "name": "PartTitle",
                           "value": "Analytics",
                           "isOptional": true
@@ -994,14 +934,6 @@
                         {
                           "name": "PartSubTitle",
                           "value": "[variables('ServerName')]",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "Dimensions",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "LegendOptions",
                           "isOptional": true
                         },
                         {
@@ -1057,15 +989,6 @@
                           "isOptional": true
                         },
                         {
-                          "name": "TimeRange",
-                          "value": "P3D",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "DashboardId",
-                          "isOptional": true
-                        },
-                        {
                           "name": "DraftRequestParameters",
                           "value": {
                             "scope": "hierarchy"
@@ -1087,6 +1010,10 @@
                           "isOptional": true
                         },
                         {
+                          "name": "PartId",
+                          "value": "[concat(uniquestring(variables('dashboardID')), 'List0')]"
+                        },
+                        {
                           "name": "PartTitle",
                           "value": "Analytics",
                           "isOptional": true
@@ -1094,14 +1021,6 @@
                         {
                           "name": "PartSubTitle",
                           "value": "[variables('ServerName')]",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "Dimensions",
-                          "isOptional": true
-                        },
-                        {
-                          "name": "LegendOptions",
                           "isOptional": true
                         },
                         {
@@ -1140,7 +1059,7 @@
                     "MsPortalFx_TimeRange": {
                       "model": {
                         "format": "utc",
-                        "granularity": "7d",
+                        "granularity": "auto",
                         "relative": "24h"
                       },
                       "displayCache": {
