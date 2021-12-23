@@ -1,0 +1,29 @@
+// Successful Non-replication connections by user
+let dummystart=datetime('2000-01-01 00:00');
+let dummyend=datetime('2000-01-01 00:01');
+let SuccessConnNonReplication=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized"
+| where Message !contains "replication connection authorized"
+| extend RealTime=todatetime(timestamp_s);
+let starttime=toscalar(
+    SuccessConnNonReplication
+    | summarize mintime=min(RealTime)
+    | project xmintime=bin(mintime, 1m)
+    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)
+    | project mintime
+);
+let endtime=toscalar(
+    SuccessConnNonReplication
+    | summarize xmaxtime=max(RealTime)
+    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)
+    | project maxtime
+);
+SuccessConnNonReplication
+| extend allmatches=extract_all(@'user=(.+)database=(.\S+)', Message)
+| extend user=trim(@" ",tostring(allmatches[0][0]) )
+| extend database=tostring(allmatches[0][1])
+| where user != 'azuresu' // exclude azure connections
+| make-series Connections=count() default=0 on RealTime from starttime to endtime step 1m by user
+| render timechart

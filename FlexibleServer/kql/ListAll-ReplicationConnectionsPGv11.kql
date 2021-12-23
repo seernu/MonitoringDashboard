@@ -1,0 +1,26 @@
+//All Replication connections PostgreSQL v11
+let MAX_PID_JOIN_SEC=30;
+let ReplicationConn=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "replication connection authorized"
+| extend tmpuser=extract(@'user=(.\S+)', 1, Message)
+| extend tmpuser2=extract(@'(.+)SSL$',1,tmpuser)
+| extend user=iff(isempty(tmpuser2),tmpuser,tmpuser2)
+| project ConnAuthTime=todatetime(timestamp_s), user, processId_d, ConAuthMSG=Message;
+let searchpids=ReplicationConn
+| distinct processId_d;
+let ConnectionReceived=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received"
+| where processId_d in (searchpids)
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| project ConnRecvTime=todatetime(timestamp_s), processId_d,IP, ConRecvMSG=Message;
+ReplicationConn
+| join kind=leftouter ConnectionReceived on $left.processId_d==$right.processId_d
+| extend ConnSetupTime=ConnAuthTime-ConnRecvTime
+| extend deltatime=datetime_diff('second',ConnAuthTime,ConnRecvTime)
+| where deltatime >=0 and deltatime <MAX_PID_JOIN_SEC
+| order by ConnRecvTime desc 
+| project IP, user, ConnRecvTime,ConnAuthTime,ConnSetupTime, PID=tostring(toint(processId_d))//,ConRecvMSG,ConAuthMSG

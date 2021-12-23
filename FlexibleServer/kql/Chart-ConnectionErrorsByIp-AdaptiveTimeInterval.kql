@@ -1,0 +1,55 @@
+//Connection errors counter by Ip
+let dummystart=datetime('2000-01-01 00:00');
+let dummyend=datetime('2000-01-01 00:01');
+let MAX_PID_JOIN_SEC=30;
+let ConnectErrors=AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "authentication failed" or sqlerrcode_s in ('28000', '28P01', '3D000', '53300', '42501','08P01')
+| where errorLevel_s =='FATAL'
+| extend AuthFailedTime=todatetime(timestamp_s);
+let starttime=toscalar(
+    ConnectErrors
+    | summarize mintime=min(AuthFailedTime)
+    | project xmintime=bin(mintime, 1m)
+    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)
+    | project mintime
+);
+let endtime=toscalar(
+    ConnectErrors
+    | summarize xmaxtime=max(AuthFailedTime)
+    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)
+    | project maxtime
+);
+let TimeRange = endtime - starttime;
+let Intervals = iff(
+    TimeRange <= 12h, 1m, 
+        iff(TimeRange <= 24h, 5m, 
+            iff(TimeRange <= 48h, 10m,
+                iff(TimeRange <= 7d, 30m,1h)
+            )
+        )
+);
+let IntervalStr=iff (
+    Intervals==1m,"1 minute",
+        iff (Intervals==5m, "5 minutes",
+            iff (Intervals==10m, "10 minutes",
+                iff (Intervals==30m, "30 minutes", "1 hour")
+            )
+        )
+);
+let searchpids=ConnectErrors
+| distinct processId_d;
+let ConnectionReceived=AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received"
+| where processId_d in (searchpids)
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| extend ConnectTime=todatetime(timestamp_s);
+ConnectErrors
+| join kind=leftouter ConnectionReceived on $left.processId_d == $right.processId_d
+| extend deltatime=datetime_diff('second', AuthFailedTime, ConnectTime)
+| where deltatime >= 0 and deltatime < MAX_PID_JOIN_SEC
+| make-series ConnectionErrors=count() default=0 on ConnectTime from starttime to endtime step Intervals by IP
+| render timechart with ( xtitle=strcat("Time (aggregation interval ",IntervalStr,")") )

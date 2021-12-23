@@ -1,0 +1,28 @@
+//All Connection failures in descending order
+let MAX_PID_JOIN_SEC=30;
+let ConnectErrors=AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "authentication failed" or sqlerrcode_s in ('28000', '28P01', '3D000', '53300', '42501','08P01')
+| where errorLevel_s =='FATAL'
+| extend preErrorMsg=extract(@'[FATAL|LOG|ERROR]:(.+)', 1, Message)
+| extend nextparseErrorMsg=extract(@':\s(.+)', 1, preErrorMsg)
+| extend ErrorMsgWithoutDetail=iff(isempty(nextparseErrorMsg), preErrorMsg, nextparseErrorMsg)
+| extend ErrorMessage=iff(isnotempty(detail_log_s), strcat(ErrorMsgWithoutDetail, '. ', detail_log_s), ErrorMsgWithoutDetail)
+| project AuthFailedTime=todatetime(timestamp_s), processId_d, ErrorMessage, SqlErrorCode=sqlerrcode_s;
+let searchpids=ConnectErrors
+| distinct processId_d;
+let ConnectionReceived=AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received"
+| where processId_d in (searchpids)
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| project ConnectTime=todatetime(timestamp_s), IP, processId_d;
+ConnectErrors
+| join kind=leftouter ConnectionReceived on $left.processId_d == $right.processId_d
+| extend ConnSetupTime=AuthFailedTime - ConnectTime
+| extend deltatime=datetime_diff('second', AuthFailedTime, ConnectTime)
+| where deltatime >= 0 and deltatime < MAX_PID_JOIN_SEC
+| project IP,ErrorMessage,SqlErrorCode,ConnectTime,AuthFailedTime,ConnSetupTime, PID=tostring(toint(processId_d))
+| order by ConnectTime desc 

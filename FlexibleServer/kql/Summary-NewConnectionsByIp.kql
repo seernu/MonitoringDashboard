@@ -1,0 +1,9 @@
+//Summary of all new connections by IP
+AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received"
+| extend RealTime=todatetime(timestamp_s)
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| summarize FirstConnection=min(RealTime),LastConnection=max(RealTime), Counter=count() by IP
+| order by Counter desc

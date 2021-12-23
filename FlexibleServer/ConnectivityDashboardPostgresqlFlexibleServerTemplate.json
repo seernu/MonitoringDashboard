@@ -1,0 +1,2274 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "PostgresqlFlexibleServerURI": {
+          "type": "string",
+          "metadata": {
+            "description": "Enter full URI of the Azure Database for PostgreSQL Flexible Server"
+          }
+      },
+      "dashboardName": {
+          "type": "string",
+          "metadata": {
+            "description": "The name is restricted to only alphanumeric and hyphen characters. Spaces will be automatically replaced with hyphen"
+          }
+      }
+  },
+  "variables": {
+    "Servername":  "[last(split(parameters('PostgresqlFlexibleServerURI'),'/'))]",
+    "dashboardID": "[concat(uniquestring(resourceGroup().id), uniquestring(replace(parameters('dashboardName'),' ', '-') ))]"
+  },
+  "resources": [
+      {
+        "properties": {
+          "lenses": {
+            "0": {
+              "order": 0,
+              "parts": {
+                "0": {
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//All new connections (including replication and azure internal connections) regardless of failed or successful by Ip\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet AllConnections=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| extend RealTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    AllConnections\n    | summarize mintime=min(RealTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    AllConnections\n    | summarize xmaxtime=max(RealTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nAllConnections\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by IP\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart0')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "RealTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "IP",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('All Connections by IP [', variables('ServerName'), ']')]" ,
+                      "subtitle": "All connections by ip including Azure connections. In this report are including all connections: replication, non-replication and failures"
+                    }
+                  }
+                },
+                "1": {
+                  "position": {
+                    "x": 9,
+                    "y": 0,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Successful Azure vs NonAzure Connections\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet SuccessConn=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| extend RealTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    SuccessConn\n    | summarize mintime=min(RealTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    SuccessConn\n    | summarize xmaxtime=max(RealTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nSuccessConn\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=trim(@\" \",tostring(allmatches[0][0]) )\n| extend Connection=iff(user == \"azuresu\",\"AzureConnections\",\"NonAzureConnections\")\n| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by Connection\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart1')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "RealTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "Connection",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Azure vs Non-Azure Successful Connections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Comparision of successful connections created by Azure vs Non-Azure (your own connections)"
+                    }
+                  }
+                },
+                "2": {
+                  "position": {
+                    "x": 0,
+                    "y": 4,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Failed vs Successful Connections [including replication]\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet MAX_PID_JOIN_SEC=30;\nlet SuccessConn=AzureDiagnostics\n    | where ResourceProvider == 'MICROSOFT.DBFORPOSTGRESQL'\n    | where Category == 'PostgreSQLLogs'\n    | where Message contains 'connection authorized'\n    | extend ConnectTime=todatetime(timestamp_s);\nlet PreFailedConn=AzureDiagnostics\n    | where ResourceProvider == 'MICROSOFT.DBFORPOSTGRESQL'\n    | where Category == 'PostgreSQLLogs'\n    | where Message contains 'authentication failed' or sqlerrcode_s in ('28000', '28P01', '3D000', '53300', '42501', '08P01')\n    | where errorLevel_s =='FATAL'\n    | extend AuthFailedTime=todatetime(timestamp_s);\nlet searchpids=PreFailedConn\n    | distinct processId_d;\nlet FailedConnectionReceived=AzureDiagnostics\n    | where ResourceProvider == 'MICROSOFT.DBFORPOSTGRESQL'\n    | where Category == 'PostgreSQLLogs'\n    | where Message contains 'connection received'\n    | where processId_d in (searchpids)\n    | extend ConnectTime=todatetime(timestamp_s);\nlet FailedConn=PreFailedConn\n    | join kind=leftouter FailedConnectionReceived on $left.processId_d == $right.processId_d\n    | extend deltatime=datetime_diff('second', AuthFailedTime, ConnectTime)\n    | where deltatime >= 0 and deltatime < MAX_PID_JOIN_SEC;\nlet AllConnections=SuccessConn\n    | union FailedConn;\nlet starttime=toscalar(\n    AllConnections\n    | summarize mintime=min(ConnectTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n    );\nlet endtime=toscalar(\n    AllConnections\n    | summarize xmaxtime=max(ConnectTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n    );\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,'1 minute',\n        iff (Intervals==5m, '5 minutes',\n            iff (Intervals==10m, '10 minutes',\n                iff (Intervals==30m, '30 minutes', '1 hour')\n            )\n        )\n);\nAllConnections\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=trim(@' ', tostring(allmatches[0][0]))\n| where user != 'azuresu'\n| extend Connection=iff(Message contains 'connection authorized', 'SuccessfulConnection', 'FailedConnection')\n| make-series Connections=count() default=0 on ConnectTime from starttime to endtime step Intervals by Connection\n| render timechart with (xtitle=strcat('Time (aggregation interval ', IntervalStr, ')'))\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart2')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "ConnectTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "Connection",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Failed vs Successful Connections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Comparision between failed and successful connections includig Replication connections. Azure connections are excluded from successful connections"
+                    }
+                  }
+                },
+                "3": {
+                  "position": {
+                    "x": 9,
+                    "y": 4,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "// Replication vs Non-Replication connections\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet AllConnections=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| extend RealTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    AllConnections\n    | summarize mintime=min(RealTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    AllConnections\n    | summarize xmaxtime=max(RealTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nAllConnections\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=trim(@\" \",tostring(allmatches[0][0]) )\n| where user != 'azuresu' // exclude azure connections from successful connections. User (role) is not reported on failed ones\n| extend Connection=iff(Message contains \"replication connection authorized\",\"ReplicationConnection\",\"Non-ReplicationConnection\")\n| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by Connection\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart3')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "RealTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "Connection",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Replication vs Non-Replication Successful connections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Comparision betwwen replication and non-replication successful connections. Azure connections are excluded from non-replication successful connections"
+                    }
+                  }
+                },
+                "4": {
+                  "position": {
+                    "x": 0,
+                    "y": 8,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "// Successful Non-replication connections by database\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet SuccessConnNonReplication=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection authorized\"\n| extend RealTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    SuccessConnNonReplication\n    | summarize mintime=min(RealTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    SuccessConnNonReplication\n    | summarize xmaxtime=max(RealTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nSuccessConnNonReplication\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=trim(@\" \",tostring(allmatches[0][0]) )\n| extend database=tostring(allmatches[0][1])\n| where user != 'azuresu' // exclude azure connections\n| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by database\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart4')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "RealTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "database",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Successful Non-replication connections by database [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Scuccesful connections by database. Replication and Azure connections are excluded"
+                    }
+                  }
+                },
+                "5": {
+                  "position": {
+                    "x": 9,
+                    "y": 8,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "// Successful Non-replication connections by user\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet SuccessConnNonReplication=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection authorized\"\n| extend RealTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    SuccessConnNonReplication\n    | summarize mintime=min(RealTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    SuccessConnNonReplication\n    | summarize xmaxtime=max(RealTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nSuccessConnNonReplication\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=trim(@\" \",tostring(allmatches[0][0]) )\n| extend database=tostring(allmatches[0][1])\n| where user != 'azuresu' // exclude azure connections\n| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by user\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart5')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "RealTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "user",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Successful Non-replication connections by user [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Scuccesful connections by user. Replication and Azure connections are excluded"
+                    }
+                  }
+                },
+                "6": {
+                  "position": {
+                    "x": 0,
+                    "y": 12,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "// Replication Connections by user\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet SuccessConn=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| extend RealTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    SuccessConn\n    | summarize mintime=min(RealTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    SuccessConn\n    | summarize xmaxtime=max(RealTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nSuccessConn\n| where Message contains \"replication connection authorized\"\n| extend allmatches=extract_all(@'user=(.+)application_name=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| extend application_name=tostring(allmatches[0][1])\n| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by user\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart6')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "RealTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "user",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Replication Connections by user [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Successful replication connections by user"
+                    }
+                  }
+                },
+                "7": {
+                  "position": {
+                    "x": 9,
+                    "y": 12,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "// Replication Connections by application_name\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet SuccessConn=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| extend RealTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    SuccessConn\n    | summarize mintime=min(RealTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    SuccessConn\n    | summarize xmaxtime=max(RealTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nSuccessConn\n| where Message contains \"replication connection authorized\"\n| extend allmatches=extract_all(@'user=(.+)application_name=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| extend application_name=tostring(allmatches[0][1])\n| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by application_name\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart7')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "RealTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "application_name",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Replication Connections by application_name [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Successful replication connections by application_name"
+                    }
+                  }
+                },
+                "8": {
+                  "position": {
+                    "x": 0,
+                    "y": 16,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Connection durations drill-down\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet Disconnections=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"disconnection\"\n| extend DisconnectTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    Disconnections\n    | summarize mintime=min(DisconnectTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    Disconnections\n    | summarize xmaxtime=max(DisconnectTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nDisconnections\n| extend allmatches=extract_all(@'session time:(.+)user=(.+)database=(.+)host=(.\\S+)', Message)\n| extend duration=totime(allmatches[0][0])\n| extend user=trim(@\" \",tostring(allmatches[0][1]) )\n| extend database=tostring(allmatches[0][2])\n| extend ip=tostring(allmatches[0][3])\n| where user != 'azuresu'\n| extend ts = totimespan(duration)\n| extend DurationInSeconds = ts / 1s\n| extend ConnType=iff(\n    DurationInSeconds <= 60, 'Short-Lived Connection' , \n    iff(DurationInSeconds > 60 and DurationInSeconds < 1200, 'Normal-Lived Connection','Long-Lived Connection')\n)\n| make-series Connections=count() default=0 on DisconnectTime from starttime to endtime step Intervals by ConnType\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart8')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "DisconnectTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "Connections",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "ConnType",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Connection Lifetime drill-down [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Short-Lived (<1 min), Normal-Lived (between 1min and 20min), Long-Lived (> 20min). Azure connections are excluded"
+                    }
+                  }
+                },
+                "9": {
+                  "position": {
+                    "x": 9,
+                    "y": 16,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Average connection duration by IP\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet Disconnections=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"disconnection\"\n| extend DisconnectTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    Disconnections\n    | summarize mintime=min(DisconnectTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    Disconnections\n    | summarize xmaxtime=max(DisconnectTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nDisconnections\n| extend allmatches=extract_all(@'session time:(.+)user=(.+)database=(.+)host=(.\\S+)', Message)\n| extend duration=totime(allmatches[0][0])\n| extend user=trim(@\" \",tostring(allmatches[0][1]) )\n| extend database=tostring(allmatches[0][2])\n| extend ip=tostring(allmatches[0][3])\n| where user != 'azuresu'\n| extend ts = totimespan(duration)\n| extend DurationInSeconds = ts / 1s\n| make-series avgConnectionDurationInSec=avg(DurationInSeconds) on DisconnectTime from starttime to endtime step Intervals by ip\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n \n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart9')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "DisconnectTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "avgConnectionDurationInSec",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "ip",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Average Connection Duration in Seconds by Ip [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Average connection duration including replication and failures. Azure connections are excluded"
+                    }
+                  }
+                },
+                "10": {
+                  "position": {
+                    "x": 0,
+                    "y": 20,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Connection errors counter by SqlErrorCode\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet MAX_PID_JOIN_SEC=30;\nlet ConnectErrors=AzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"authentication failed\" or sqlerrcode_s in ('28000', '28P01', '3D000', '53300', '42501','08P01')\n| where errorLevel_s =='FATAL'\n| extend SqlErrorCode=sqlerrcode_s\n| extend AuthFailedTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    ConnectErrors\n    | summarize mintime=min(AuthFailedTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    ConnectErrors\n    | summarize xmaxtime=max(AuthFailedTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nlet searchpids=ConnectErrors\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| extend ConnectTime=todatetime(timestamp_s);\nConnectErrors\n| join kind=leftouter ConnectionReceived on $left.processId_d == $right.processId_d\n| extend deltatime=datetime_diff('second', AuthFailedTime, ConnectTime)\n| where deltatime >= 0 and deltatime < MAX_PID_JOIN_SEC\n| make-series ConnectionErrors=count() default=0 on ConnectTime from starttime to endtime step Intervals by SqlErrorCode\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart10')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "ConnectTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "ConnectionErrors",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "SqlErrorCode",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Connection Errors by SqlErrorCode [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Connection errors grouped by SQL Error Code"
+                    }
+                  }
+                },
+                "11": {
+                  "position": {
+                    "x": 9,
+                    "y": 20,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Connection errors counter by Ip\nlet dummystart=datetime('2000-01-01 00:00');\nlet dummyend=datetime('2000-01-01 00:01');\nlet MAX_PID_JOIN_SEC=30;\nlet ConnectErrors=AzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"authentication failed\" or sqlerrcode_s in ('28000', '28P01', '3D000', '53300', '42501','08P01')\n| where errorLevel_s =='FATAL'\n| extend AuthFailedTime=todatetime(timestamp_s);\nlet starttime=toscalar(\n    ConnectErrors\n    | summarize mintime=min(AuthFailedTime)\n    | project xmintime=bin(mintime, 1m)\n    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)\n    | project mintime\n);\nlet endtime=toscalar(\n    ConnectErrors\n    | summarize xmaxtime=max(AuthFailedTime)\n    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)\n    | project maxtime\n);\nlet TimeRange = endtime - starttime;\nlet Intervals = iff(\n    TimeRange <= 12h, 1m, \n        iff(TimeRange <= 24h, 5m, \n            iff(TimeRange <= 48h, 10m,\n                iff(TimeRange <= 7d, 30m,1h)\n            )\n        )\n);\nlet IntervalStr=iff (\n    Intervals==1m,\"1 minute\",\n        iff (Intervals==5m, \"5 minutes\",\n            iff (Intervals==10m, \"10 minutes\",\n                iff (Intervals==30m, \"30 minutes\", \"1 hour\")\n            )\n        )\n);\nlet searchpids=ConnectErrors\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| extend ConnectTime=todatetime(timestamp_s);\nConnectErrors\n| join kind=leftouter ConnectionReceived on $left.processId_d == $right.processId_d\n| extend deltatime=datetime_diff('second', AuthFailedTime, ConnectTime)\n| where deltatime >= 0 and deltatime < MAX_PID_JOIN_SEC\n| make-series ConnectionErrors=count() default=0 on ConnectTime from starttime to endtime step Intervals by IP\n| render timechart with ( xtitle=strcat(\"Time (aggregation interval \",IntervalStr,\")\") )\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "FrameControlChart",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "SpecificChart",
+                        "value": "Line",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Chart11')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Dimensions",
+                        "value": {
+                          "xAxis": {
+                            "name": "ConnectTime",
+                            "type": "datetime"
+                          },
+                          "yAxis": [
+                            {
+                              "name": "ConnectionErrors",
+                              "type": "real"
+                            }
+                          ],
+                          "splitBy": [
+                            {
+                              "name": "IP",
+                              "type": "string"
+                            }
+                          ],
+                          "aggregation": "Sum"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "LegendOptions",
+                        "value": {
+                          "isEnabled": true,
+                          "position": "Bottom"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {},
+                    "partHeader": {
+                      "title": "[concat('Connection Errors by IP [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Connection errors grouped by IP"
+                    }
+                  }
+                },
+                "12": {
+                  "position": {
+                    "x": 0,
+                    "y": 24,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Summary of all new connections by IP\nAzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| extend RealTime=todatetime(timestamp_s)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| summarize FirstConnection=min(RealTime),LastConnection=max(RealTime), Counter=count() by IP\n| order by Counter desc\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Summary0')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "FirstConnection": "223px",
+                          "LastConnection": "223px"
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('Summary of new connections by IP [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Summary of all connections grouped by ip. It includes failures, replication and azure connections"
+                    }
+                  }
+                },
+                "13": {
+                  "position": {
+                    "x": 9,
+                    "y": 24,
+                    "colSpan": 9,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": " //Summary of Azure Only Successful Connections\nlet MAX_PID_JOIN_SEC=30;\nlet ConnectionAuthorized=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection\"\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=trim(@\" \",tostring(allmatches[0][0]) )\n| extend database=tostring(allmatches[0][1])\n| where user == 'azuresu' // only azuresu connections\n| project ConnAuthTime=todatetime(timestamp_s), processId_d,user, database, ConAuthMSG=Message;\nlet searchpids=ConnectionAuthorized\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| project ConnRecvTime=todatetime(timestamp_s), processId_d,IP, ConRecvMSG=Message;\nConnectionAuthorized\n| join kind=leftouter ConnectionReceived on $left.processId_d==$right.processId_d\n| project processId_d,IP,user,database,ConnRecvTime,ConnAuthTime,ConRecvMSG,ConAuthMSG\n| extend ConnSetupTime=ConnAuthTime-ConnRecvTime\n| extend deltatime=datetime_diff('second',ConnAuthTime,ConnRecvTime)\n| where deltatime >=0 and deltatime <MAX_PID_JOIN_SEC\n| order by ConnRecvTime desc \n| project IP,user,database,ConnRecvTime,ConnAuthTime,ConnSetupTime,processId_d//,ConRecvMSG,ConAuthMSG\n| summarize FirstConnection=min(ConnRecvTime),LastConnection=max(ConnRecvTime), Count=count() by IP, user, database\n| order by Count desc \n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Summary1')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "105px",
+                          "user": "64px",
+                          "database": "216px",
+                          "FirstConnection": "140px",
+                          "LastConnection": "147px",
+                          "Count": "77px"
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('Summary of Azure Successful Connections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Only Azure successful connections summary"
+                    }
+                  }
+                },
+                "14": {
+                  "position": {
+                    "x": 0,
+                    "y": 28,
+                    "colSpan": 18,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Summary of Successful Connections\nlet MAX_PID_JOIN_SEC=30;\nlet ConnectionAuthorized=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection\"\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=trim(@\" \",tostring(allmatches[0][0]) )\n| extend database=tostring(allmatches[0][1])\n| where user != 'azuresu' // exclude azuresu connections\n| project ConnAuthTime=todatetime(timestamp_s), processId_d,user, database, ConAuthMSG=Message;\nlet searchpids=ConnectionAuthorized\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| project ConnRecvTime=todatetime(timestamp_s), processId_d,IP, ConRecvMSG=Message;\nConnectionAuthorized\n| join kind=leftouter ConnectionReceived on $left.processId_d==$right.processId_d\n| project processId_d,IP,user,database,ConnRecvTime,ConnAuthTime,ConRecvMSG,ConAuthMSG\n| extend ConnSetupTime=ConnAuthTime-ConnRecvTime\n| extend deltatime=datetime_diff('second',ConnAuthTime,ConnRecvTime)\n| where deltatime >=0 and deltatime <MAX_PID_JOIN_SEC\n| order by ConnRecvTime desc \n| project IP,user,database,ConnRecvTime,ConnAuthTime,ConnSetupTime,processId_d//,ConRecvMSG,ConAuthMSG\n| summarize FirstConnection=min(ConnRecvTime),LastConnection=max(ConnRecvTime), Count=count() by IP, user, database\n| order by Count desc \n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Summary2')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "user": "266px",
+                          "database": "502px",
+                          "FirstConnection": "273px",
+                          "LastConnection": "231px",
+                          "Count": "75px"
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('Summary of Successful Connections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Non-Replication successful connections summary. Data is grouped by ip, user and database. Azure internal connections are excluded"
+                    }
+                  }
+                },
+                "15": {
+                  "position": {
+                    "x": 0,
+                    "y": 32,
+                    "colSpan": 18,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Summary of Replication connections\nlet MAX_PID_JOIN_SEC=30;\nlet ReplicationConn=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"replication connection authorized\"\n| extend allmatches=extract_all(@'user=(.+)application_name=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| extend application_name=tostring(allmatches[0][1])\n| project ConnAuthTime=todatetime(timestamp_s), user, application_name, processId_d, ConAuthMSG=Message;\nlet searchpids=ReplicationConn\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| project ConnRecvTime=todatetime(timestamp_s), processId_d,IP, ConRecvMSG=Message;\nReplicationConn\n| join kind=leftouter ConnectionReceived on $left.processId_d==$right.processId_d\n| extend ConnSetupTime=ConnAuthTime-ConnRecvTime\n| extend deltatime=datetime_diff('second',ConnAuthTime,ConnRecvTime)\n| where deltatime >=0 and deltatime <MAX_PID_JOIN_SEC\n| summarize FirstConnection=min(ConnRecvTime),LastConnection=max(ConnRecvTime), Count=count() by IP, user, application_name\n| order by Count desc \n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Summary3')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "user": "266px",
+                          "application_name": "502px",
+                          "FirstConnection": "273px",
+                          "LastConnection": "231px",
+                          "Count": "75px"
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('Summary of Replication connections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Replication only connection summary"
+                    }
+                  }
+                },
+                "16": {
+                  "position": {
+                    "x": 0,
+                    "y": 36,
+                    "colSpan": 18,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "// Summary of disconnections\nAzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"disconnection\"\n| extend allmatches=extract_all(@'session time:(.+)user=(.+)database=(.+)host=(.\\S+)', Message)\n| extend duration=totime(allmatches[0][0])\n| extend user=trim(@\" \",tostring(allmatches[0][1]) )\n| extend database=tostring(allmatches[0][2])\n| extend IP=tostring(allmatches[0][3])\n| where user != 'azuresu'\n| extend ts = totimespan(duration)\n| extend DurationInSeconds = ts / 1s\n| extend DisconnectTime=todatetime(timestamp_s)\n| summarize FirstDisconnection=min(DisconnectTime), LastDisconnection=max(DisconnectTime), minDurationSec=min(DurationInSeconds), \nmaxDurationSec=max(DurationInSeconds), AvgDurationSec=avg(DurationInSeconds),\n NrOfDisconnections=count() by IP,user, database\n| order by NrOfDisconnections desc \n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Summary4')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "user": "210px",
+                          "database": "280px",
+                          "NrOfDisconnections": "166px"
+                          
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('Summary of disconnections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "Summary of disconnections for all connection types including failures. Duration is reported in seconds. Azure disconnections are excluded"
+                    }
+                  }
+                },
+                "17": {
+                  "position": {
+                    "x": 0,
+                    "y": 40,
+                    "colSpan": 18,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//Summary of All Failed logins\nlet MAX_PID_JOIN_SEC=30;\nlet ConnectErrors=AzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"authentication failed\" or sqlerrcode_s in ('28000', '28P01', '3D000', '53300', '42501','08P01')\n| where errorLevel_s =='FATAL'\n| extend preErrorMsg=extract(@'[FATAL|LOG|ERROR]:(.+)', 1, Message)\n| extend nextparseErrorMsg=extract(@':\\s(.+)', 1, preErrorMsg)\n| extend ErrorMsgWithoutDetail=iff(isempty(nextparseErrorMsg), preErrorMsg, nextparseErrorMsg)\n| extend ErrorMessage=iff(isnotempty(detail_log_s), strcat(ErrorMsgWithoutDetail, '. ', detail_log_s), ErrorMsgWithoutDetail)\n| project AuthFailedTime=todatetime(timestamp_s), processId_d, ErrorMessage, SqlErrorCode=sqlerrcode_s;\nlet searchpids=ConnectErrors\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| project ConnectTime=todatetime(timestamp_s), IP, processId_d;\nConnectErrors\n| join kind=leftouter ConnectionReceived on $left.processId_d == $right.processId_d\n| extend ConnSetupTime=AuthFailedTime - ConnectTime\n| extend deltatime=datetime_diff('second', AuthFailedTime, ConnectTime)\n| where deltatime >= 0 and deltatime < MAX_PID_JOIN_SEC\n| summarize FirstErrorTime=min(ConnectTime), LastErrorTime=max(ConnectTime), TotalErrors=count() by IP, ErrorMessage, SqlErrorCode\n| order by TotalErrors desc \n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'Summary5')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "ErrorMessage": "858px",
+                          "SqlErrorCode": "150px",
+                          "TotalErrors": "99px"
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('Summary of All Failed logins [', variables('ServerName'), ']')]" ,
+                      "subtitle": "All login failures summary. Data is grouped by IP and Error Message"
+                    }
+                  }
+                },
+                "18": {
+                  "position": {
+                    "x": 0,
+                    "y": 44,
+                    "colSpan": 18,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//All Successful Connections in descending order\nlet MAX_PID_JOIN_SEC=30;\nlet ConnectionAuthorized=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection authorized\"\n| where Message !contains \"replication connection\"\n| extend allmatches=extract_all(@'user=(.+)database=(.\\S+)', Message)\n| extend user=trim(@\" \",tostring(allmatches[0][0]) )\n| extend database=tostring(allmatches[0][1])\n| where user != 'azuresu' // exclude azuresu connections\n| project ConnAuthTime=todatetime(timestamp_s), processId_d,user, database, ConAuthMSG=Message;\nlet searchpids=ConnectionAuthorized\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| project ConnRecvTime=todatetime(timestamp_s), processId_d,IP, ConRecvMSG=Message;\nConnectionAuthorized\n| join kind=leftouter ConnectionReceived on $left.processId_d==$right.processId_d\n| extend ConnSetupTime=ConnAuthTime-ConnRecvTime\n| extend deltatime=datetime_diff('second',ConnAuthTime,ConnRecvTime)\n| where deltatime >=0 and deltatime <MAX_PID_JOIN_SEC\n| project IP,user,database,ConnRecvTime,ConnAuthTime,ConnSetupTime,PID=tostring(toint(processId_d))//,ConRecvMSG,ConAuthMSG\n| order by ConnRecvTime desc \n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'OptionalList0')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "user": "254px",
+                          "database": "605px",
+                          "PID": "99px"
+                          
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('[OPTIONAL] All Successful conections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "All Successful conections in descending order. Azure connections are excluded"
+                    }
+                  }
+                },
+                "19": {
+                  "position": {
+                    "x": 0,
+                    "y": 48,
+                    "colSpan": 18,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//All Replication connections\nlet MAX_PID_JOIN_SEC=30;\nlet ReplicationConn=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"replication connection authorized\"\n| extend allmatches=extract_all(@'user=(.+)application_name=(.\\S+)', Message)\n| extend user=tostring(allmatches[0][0])\n| extend application_name=tostring(allmatches[0][1])\n| project ConnAuthTime=todatetime(timestamp_s), user, application_name, processId_d, ConAuthMSG=Message;\nlet searchpids=ReplicationConn\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| project ConnRecvTime=todatetime(timestamp_s), processId_d,IP, ConRecvMSG=Message;\nReplicationConn\n| join kind=leftouter ConnectionReceived on $left.processId_d==$right.processId_d\n| extend ConnSetupTime=ConnAuthTime-ConnRecvTime\n| extend deltatime=datetime_diff('second',ConnAuthTime,ConnRecvTime)\n| where deltatime >=0 and deltatime <MAX_PID_JOIN_SEC\n| order by ConnRecvTime desc \n| project IP, user, application_name, ConnRecvTime,ConnAuthTime,ConnSetupTime, PID=tostring(toint(processId_d))//,ConRecvMSG,ConAuthMSG\n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'OptionalList1')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "user": "254px",
+                          "application_name": "605px",
+                          "PID": "99px"
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('[OPTIONAL] All replication connections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "All replication connections in descending order"
+                    }
+                  }
+                },
+                "20": {
+                  "position": {
+                    "x": 0,
+                    "y": 52,
+                    "colSpan": 18,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "// All disconnections in descending order\nAzureDiagnostics\n| where ResourceProvider ==\"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"disconnection\"\n| extend allmatches=extract_all(@'session time:(.+)user=(.+)database=(.+)host=(.\\S+)', Message)\n| extend duration=totime(allmatches[0][0])\n| extend user=trim(@\" \",tostring(allmatches[0][1]) )\n| extend database=tostring(allmatches[0][2])\n| extend IP=tostring(allmatches[0][3])\n| where user != 'azuresu'\n| extend ts = totimespan(duration)\n| extend DurationInSeconds = ts / 1s\n| project IP,user,database,DisconnectTime=todatetime(timestamp_s), duration,DurationInSeconds, PID=tostring(toint(processId_d))\n| order by DisconnectTime desc \n\n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'OptionalList2')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "user": "254px",
+                          "database": "605px",
+                          "PID": "99px"
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('[OPTIONAL] All Disconnections [', variables('ServerName'), ']')]" ,
+                      "subtitle": "All disconnections in descending order. Azure disconnections are excluded"
+                    }
+                  }
+                },
+                "21": {
+                  "position": {
+                    "x": 0,
+                    "y": 56,
+                    "colSpan": 18,
+                    "rowSpan": 4
+                  },
+                  "metadata": {
+                    "inputs": [
+                      {
+                        "name": "resourceTypeMode",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ComponentId",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Scope",
+                        "value": {
+                          "resourceIds": [
+                            "[parameters('PostgresqlFlexibleServerURI')]"
+                          ]
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Version",
+                        "value": "2.0",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "DraftRequestParameters",
+                        "value": {
+                          "scope": "hierarchy"
+                        },
+                        "isOptional": true
+                      },
+                      {
+                        "name": "Query",
+                        "value": "//All Connection failures in descending order\nlet MAX_PID_JOIN_SEC=30;\nlet ConnectErrors=AzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"authentication failed\" or sqlerrcode_s in ('28000', '28P01', '3D000', '53300', '42501','08P01')\n| where errorLevel_s =='FATAL'\n| extend preErrorMsg=extract(@'[FATAL|LOG|ERROR]:(.+)', 1, Message)\n| extend nextparseErrorMsg=extract(@':\\s(.+)', 1, preErrorMsg)\n| extend ErrorMsgWithoutDetail=iff(isempty(nextparseErrorMsg), preErrorMsg, nextparseErrorMsg)\n| extend ErrorMessage=iff(isnotempty(detail_log_s), strcat(ErrorMsgWithoutDetail, '. ', detail_log_s), ErrorMsgWithoutDetail)\n| project AuthFailedTime=todatetime(timestamp_s), processId_d, ErrorMessage, SqlErrorCode=sqlerrcode_s;\nlet searchpids=ConnectErrors\n| distinct processId_d;\nlet ConnectionReceived=AzureDiagnostics\n| where ResourceProvider == \"MICROSOFT.DBFORPOSTGRESQL\"\n| where Category == \"PostgreSQLLogs\"\n| where Message contains \"connection received\"\n| where processId_d in (searchpids)\n| extend IP=extract(@'host=(.\\S+)', 1, Message)\n| project ConnectTime=todatetime(timestamp_s), IP, processId_d;\nConnectErrors\n| join kind=leftouter ConnectionReceived on $left.processId_d == $right.processId_d\n| extend ConnSetupTime=AuthFailedTime - ConnectTime\n| extend deltatime=datetime_diff('second', AuthFailedTime, ConnectTime)\n| where deltatime >= 0 and deltatime < MAX_PID_JOIN_SEC\n| project IP,ErrorMessage,SqlErrorCode,ConnectTime,AuthFailedTime,ConnSetupTime, PID=tostring(toint(processId_d))\n| order by ConnectTime desc \n",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "ControlType",
+                        "value": "AnalyticsGrid",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartId",
+                        "value": "[concat(uniquestring(variables('dashboardID')), 'OptionalList3')]"
+                      },
+                      {
+                        "name": "PartTitle",
+                        "value": "Analytics",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "PartSubTitle",
+                        "value": "[variables('ServerName')]",
+                        "isOptional": true
+                      },
+                      {
+                        "name": "IsQueryContainTimeRange",
+                        "value": false,
+                        "isOptional": true
+                      }
+                    ],
+                    "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                    "settings": {
+                      "content": {
+                        "GridColumnsWidth": {
+                          "IP": "157px",
+                          "ErrorMessage": "710px",
+                          "SqlErrorCode": "150px",
+                          "PID": "99px"
+                        }
+                      }
+                    },
+                    "partHeader": {
+                      "title": "[concat('[OPTIONAL] All Login failures [', variables('ServerName'), ']')]" ,
+                      "subtitle": "All Login failures in descending order"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "metadata": {
+            "model": {
+              "timeRange": {
+                "value": {
+                  "relative": {
+                    "duration": 24,
+                    "timeUnit": 1
+                  }
+                },
+                "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
+              },
+              "filterLocale": {
+                "value": "en-us"
+              },
+              "filters": {
+                "value": {
+                  "MsPortalFx_TimeRange": {
+                    "model": {
+                      "format": "utc",
+                      "granularity": "auto",
+                      "relative": "7d"
+                    },
+                    "displayCache": {
+                      "name": "UTC Time",
+                      "value": "Past 7 days"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "apiVersion": "2015-08-01-preview",
+        "type": "Microsoft.Portal/dashboards",
+        "name": "[replace(parameters('dashboardName'),' ', '-')]",
+        "location": "[resourceGroup().location]",
+        "tags": {           
+            "hidden-title": "[replace(parameters('dashboardName'),' ', '-')]"
+        }
+      }
+  ]
+}

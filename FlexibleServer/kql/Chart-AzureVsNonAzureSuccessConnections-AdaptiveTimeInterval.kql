@@ -1,0 +1,44 @@
+//Successful Azure vs NonAzure Connections
+let dummystart=datetime('2000-01-01 00:00');
+let dummyend=datetime('2000-01-01 00:01');
+let SuccessConn=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized"
+| extend RealTime=todatetime(timestamp_s);
+let starttime=toscalar(
+    SuccessConn
+    | summarize mintime=min(RealTime)
+    | project xmintime=bin(mintime, 1m)
+    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)
+    | project mintime
+);
+let endtime=toscalar(
+    SuccessConn
+    | summarize xmaxtime=max(RealTime)
+    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)
+    | project maxtime
+);
+let TimeRange = endtime - starttime;
+let Intervals = iff(
+    TimeRange <= 12h, 1m, 
+        iff(TimeRange <= 24h, 5m, 
+            iff(TimeRange <= 48h, 10m,
+                iff(TimeRange <= 7d, 30m,1h)
+            )
+        )
+);
+let IntervalStr=iff (
+    Intervals==1m,"1 minute",
+        iff (Intervals==5m, "5 minutes",
+            iff (Intervals==10m, "10 minutes",
+                iff (Intervals==30m, "30 minutes", "1 hour")
+            )
+        )
+);
+SuccessConn
+| extend allmatches=extract_all(@'user=(.+)database=(.\S+)', Message)
+| extend user=trim(@" ",tostring(allmatches[0][0]) )
+| extend Connection=iff(user == "azuresu","AzureConnections","NonAzureConnections")
+| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by Connection
+| render timechart with ( xtitle=strcat("Time (aggregation interval ",IntervalStr,")") )

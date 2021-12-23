@@ -1,0 +1,18 @@
+// Summary of disconnections
+AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "disconnection"
+| extend allmatches=extract_all(@'session time:(.+)user=(.+)database=(.+)host=(.\S+)', Message)
+| extend duration=totime(allmatches[0][0])
+| extend user=trim(@" ",tostring(allmatches[0][1]) )
+| extend database=tostring(allmatches[0][2])
+| extend IP=tostring(allmatches[0][3])
+| where user != 'azuresu'
+| extend ts = totimespan(duration)
+| extend DurationInSeconds = ts / 1s
+| extend DisconnectTime=todatetime(timestamp_s)
+| summarize FirstDisconnection=min(DisconnectTime), LastDisconnection=max(DisconnectTime), minDurationSec=min(DurationInSeconds), 
+maxDurationSec=max(DurationInSeconds), AvgDurationSec=avg(DurationInSeconds),
+ NrOfDisconnections=count() by IP,user, database
+| order by NrOfDisconnections desc 

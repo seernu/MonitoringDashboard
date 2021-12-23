@@ -1,0 +1,25 @@
+//All new connections (including replication and azure internal connections) regardless of failed or successful by Ip
+let dummystart=datetime('2000-01-01 00:00');
+let dummyend=datetime('2000-01-01 00:01');
+let AllConnections=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received"
+| extend RealTime=todatetime(timestamp_s);
+let starttime=toscalar(
+    AllConnections
+    | summarize mintime=min(RealTime)
+    | project xmintime=bin(mintime, 1m)
+    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)
+    | project mintime
+);
+let endtime=toscalar(
+    AllConnections
+    | summarize xmaxtime=max(RealTime)
+    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)
+    | project maxtime
+);
+AllConnections
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| make-series Connections=count() default=0 on RealTime from starttime to endtime step 1m by IP
+| render timechart

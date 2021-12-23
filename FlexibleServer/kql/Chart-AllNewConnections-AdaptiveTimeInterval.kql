@@ -1,0 +1,42 @@
+//All new connections (including replication and azure internal connections) regardless of failed or successful by Ip
+let dummystart=datetime('2000-01-01 00:00');
+let dummyend=datetime('2000-01-01 00:01');
+let AllConnections=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received"
+| extend RealTime=todatetime(timestamp_s);
+let starttime=toscalar(
+    AllConnections
+    | summarize mintime=min(RealTime)
+    | project xmintime=bin(mintime, 1m)
+    | extend mintime=iff(isnotempty(xmintime), xmintime, dummystart)
+    | project mintime
+);
+let endtime=toscalar(
+    AllConnections
+    | summarize xmaxtime=max(RealTime)
+    | extend maxtime=iff(isnotempty(xmaxtime), xmaxtime, dummyend)
+    | project maxtime
+);
+let TimeRange = endtime - starttime;
+let Intervals = iff(
+    TimeRange <= 12h, 1m, 
+        iff(TimeRange <= 24h, 5m, 
+            iff(TimeRange <= 48h, 10m,
+                iff(TimeRange <= 7d, 30m,1h)
+            )
+        )
+);
+let IntervalStr=iff (
+    Intervals==1m,"1 minute",
+        iff (Intervals==5m, "5 minutes",
+            iff (Intervals==10m, "10 minutes",
+                iff (Intervals==30m, "30 minutes", "1 hour")
+            )
+        )
+);
+AllConnections
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| make-series Connections=count() default=0 on RealTime from starttime to endtime step Intervals by IP
+| render timechart with ( xtitle=strcat("Time (aggregation interval ",IntervalStr,")") )

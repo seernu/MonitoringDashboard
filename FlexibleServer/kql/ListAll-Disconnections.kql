@@ -1,0 +1,15 @@
+// All disconnections in descending order
+AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "disconnection"
+| extend allmatches=extract_all(@'session time:(.+)user=(.+)database=(.+)host=(.\S+)', Message)
+| extend duration=totime(allmatches[0][0])
+| extend user=trim(@" ",tostring(allmatches[0][1]) )
+| extend database=tostring(allmatches[0][2])
+| extend IP=tostring(allmatches[0][3])
+| where user != 'azuresu'
+| extend ts = totimespan(duration)
+| extend DurationInSeconds = ts / 1s
+| project IP,user,database,DisconnectTime=todatetime(timestamp_s), duration,DurationInSeconds, PID=tostring(toint(processId_d))
+| order by DisconnectTime desc 

@@ -1,0 +1,32 @@
+ //Summary of Azure Only Successful Connections
+let MAX_PID_JOIN_SEC=30;
+let ConnectionAuthorized=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection authorized"
+| where Message !contains "replication connection"
+| extend allmatches=extract_all(@'user=(.+)database=(.\S+)', Message)
+| extend user=trim(@" ",tostring(allmatches[0][0]) )
+| extend database=tostring(allmatches[0][1])
+| where user == 'azuresu' // only azuresu connections
+| project ConnAuthTime=todatetime(timestamp_s), processId_d,user, database, ConAuthMSG=Message;
+let searchpids=ConnectionAuthorized
+| distinct processId_d;
+let ConnectionReceived=AzureDiagnostics
+| where ResourceProvider =="MICROSOFT.DBFORPOSTGRESQL"
+| where Category == "PostgreSQLLogs"
+| where Message contains "connection received"
+| where processId_d in (searchpids)
+| extend IP=extract(@'host=(.\S+)', 1, Message)
+| project ConnRecvTime=todatetime(timestamp_s), processId_d,IP, ConRecvMSG=Message;
+ConnectionAuthorized
+| join kind=leftouter ConnectionReceived on $left.processId_d==$right.processId_d
+| project processId_d,IP,user,database,ConnRecvTime,ConnAuthTime,ConRecvMSG,ConAuthMSG
+| extend ConnSetupTime=ConnAuthTime-ConnRecvTime
+| extend deltatime=datetime_diff('second',ConnAuthTime,ConnRecvTime)
+| where deltatime >=0 and deltatime <MAX_PID_JOIN_SEC
+| order by ConnRecvTime desc 
+| project IP,user,database,ConnRecvTime,ConnAuthTime,ConnSetupTime,processId_d//,ConRecvMSG,ConAuthMSG
+| summarize FirstConnection=min(ConnRecvTime),LastConnection=max(ConnRecvTime), Count=count() by IP, user, database
+| order by Count desc 
+
